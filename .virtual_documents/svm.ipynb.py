@@ -3,20 +3,20 @@ from sklearn import svm
 from sklearn.model_selection import  KFold, GridSearchCV
 
 
-X = np.loadtxt('X.txt',delimiter=',')
-Y_cat = np.loadtxt('Y_cat.txt')
+X = np.loadtxt('datasets/X.txt',delimiter=',')
+y = np.loadtxt('datasets/Y_cla.txt')
 
 
 C_range = np.arange(1,10.1,0.1)
-gamma_range = np.logspace(-5,1,7)
+gamma_range = np.logspace(-7,-1,7)
 param_grid = [dict(C=C_range, gamma=gamma_range)]
 
 # Parameters
-K =  10      # k-fold parameter
+K =  5      # k-fold parameter
 
 # Cross-validation
 cv = KFold(n_splits=K)
-grid = GridSearchCV(svm.SVC(kernel='rbf',cache_size=1000), param_grid=param_grid, cv=cv, n_jobs=-1,verbose=1)
+grid = GridSearchCV(svm.SVC(kernel='rbf',cache_size=1000), param_grid=param_grid, cv=cv, n_jobs=-1)
 grid.fit(X,y)
 
 

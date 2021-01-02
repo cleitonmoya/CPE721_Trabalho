@@ -21,7 +21,7 @@ var_bin = ['school', 'sex', 'address', 'famsize', 'Pstatus', 'schoolsup', 'famsu
 var_nom = ['Mjob', 'Fjob', 'reason', 'guardian']
 var_num = ['age', 'absences', 'G1', 'G2', 'G3']
 var_ord = ['Medu', 'Fedu', 'traveltime', 'studytime', 'failures', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health']
-var_int = var_ord + var_num
+var_int = var_ord + var_num # variáveis inteiras
 
 
 df_por.isnull().values.any() or df_mat.isnull().values.any()
@@ -126,6 +126,7 @@ else:
 
 
 df = df_por.copy()
+df_num = df[num[:-3]]
 
 
 df['school'].replace({'GP': -1, 'MS': 1}, inplace=True)
@@ -144,7 +145,7 @@ df['romantic'].replace({'no': -1, 'yes': 1}, inplace=True)
 
 
 df['g3_cat'] = (df.G3 > 10).astype(int).replace({0:-1})
-Y_cla = df['g3_cat'].values
+Y_cla = df['g3_cat'].values.reshape(len(Y_cla),1)
 
 
 fig, ax1 = plt.subplots(figsize=(10,10))
@@ -283,7 +284,16 @@ cont1
 
 var_bin_exc = ['famsize', 'Pstatus', 'famsup' 'nursey', 'schoolsup', 'paid']
 var_nom_exc = ['Fjob']
-var = list(set(var_bin)-set(var_bin_exc)) + list(set(var_nom)-set(var_nom_exc)) + var_int[:-3]
+
+var_bin2 = list(set(var_bin)-set(var_bin_exc))
+var_nom2 = list(set(var_nom)-set(var_nom_exc))
+var_ord2 = var_ord
+var_num2 = var_num[:-3]
+var_int2 = var_int[:-3]
+
+df_X = pd.DataFrame(index=df.index)
+df_X = df_X.join([df[var_bin2], df_nom[var_nom2], df[var_ord2], df[var_num2]])
+
 print(var)
 
 
@@ -295,30 +305,25 @@ Y_reg = scalerG3.transform(df[['G3']])
 
 
 from sklearn.pipeline import Pipeline
-num_pipeline = Pipeline([
-    ('std_scaler', StandardScaler()),
-])
-
 from sklearn.compose import ColumnTransformer
-full_pipeline = ColumnTransformer([
-    ("num", num_pipeline, var_int[:-3]),
-])
 
-dfInt = pd.DataFrame(
-     data = full_pipeline.fit_transform(df),
-     columns = var_int[:-3])
+num_pipeline = Pipeline([('std_scaler', StandardScaler())])
+full_pipeline = ColumnTransformer([("num", num_pipeline, var_num2)])
+
+df_X[var_num2] = pd.DataFrame(data=full_pipeline.fit_transform(df), columns = var_num2)
+
+
+df_X
 
 
 oh_Mjob=pd.get_dummies(df_por['Mjob']).replace({0:-1}).values
-oh_Fjob=pd.get_dummies(df_por['Fjob']).replace({0:-1}).values
 oh_reason=pd.get_dummies(df_por['reason']).replace({0:-1}).values
 oh_guardian=pd.get_dummies(df_por['guardian']).replace({0:-1}).values
 
-X_pos1 = np.hstack((dfInt.values, df[var_bin].values, oh_Mjob, oh_Fjob, oh_reason, oh_guardian)) # sem exclusão de features
-X_pos2 = np.hstack((dfInt.values, df[list(set(var_bin)-set(var_bin_exc))].values, oh_Mjob, oh_reason, oh_guardian)) # com exclusão de features
+X = np.hstack((df_X[var_bin2 + var_ord2 + var_num2].values, oh_Fjob, oh_reason, oh_guardian))
+X.shape
 
 
-np.savetxt('datasets/X_pos1.txt',X_pos1,delimiter=',')
-np.savetxt('datasets/X_pos2.txt',X_pos2,delimiter=',')
+np.savetxt('datasets/X.txt',X,delimiter=',')
 np.savetxt('datasets/Y_cla.txt',Y_cla)
 np.savetxt('datasets/Y_reg.txt',Y_reg)

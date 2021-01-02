@@ -2,10 +2,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from termcolor import colored
+from scipy.stats import probplot, norm, mannwhitneyu, kstest, chi2_contingency 
+from sklearn.preprocessing import StandardScaler
 
 
-df_mat = pd.read_csv('student-mat.csv', sep=';')
-df_por = pd.read_csv('student-por.csv', sep=';')
+df_mat = pd.read_csv('datasets/student-mat.csv', sep=';')
+df_por = pd.read_csv('datasets/student-por.csv', sep=';')
 
 
 df_por
@@ -16,7 +19,9 @@ df_mat
 
 var_bin = ['school', 'sex', 'address', 'famsize', 'Pstatus', 'schoolsup', 'famsup', 'paid', 'activities', 'nursery', 'higher', 'internet', 'romantic']
 var_nom = ['Mjob', 'Fjob', 'reason', 'guardian']
-var_num = ['age', 'Medu', 'Fedu', 'traveltime', 'studytime', 'failures', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health', 'absences', 'G1', 'G2', 'G3']
+var_num = ['age', 'absences', 'G1', 'G2', 'G3']
+var_ord = ['Medu', 'Fedu', 'traveltime', 'studytime', 'failures', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health']
+var_int = var_ord + var_num
 
 
 df_por.isnull().values.any() or df_mat.isnull().values.any()
@@ -69,8 +74,6 @@ ax[0].legend()
 plt.show()
 
 
-from scipy.stats import mannwhitneyu
-from termcolor import colored
 alpha=0.05
 U,p = mannwhitneyu(df_por['G3'], df_mat['G3'],use_continuity=False)
 print('Estatística:', U)
@@ -81,7 +84,6 @@ else:
     print(colored('Não rejeitamos H0','green'))
 
 
-from scipy.stats import probplot
 fig, axs = plt.subplots(2, 6, figsize=(14,5))
 axs[0,0].set_title('Por - G1')
 axs[0,0].hist(df_por['G1'], alpha=0.5, edgecolor='white',linewidth=0.5)
@@ -113,8 +115,6 @@ axs[1,5].set_title('Mat - G3')
 plt.tight_layout()
 
 
-from scipy.stats import kstest, norm
-from termcolor import colored
 alpha=0.05
 s,p = kstest(df_por['G1'], norm(df_por['G1'].mean(), df_por['G1'].std()).cdf)
 print('Estatística:', s)
@@ -143,8 +143,12 @@ df['internet'].replace({'no': -1, 'yes': 1}, inplace=True)
 df['romantic'].replace({'no': -1, 'yes': 1}, inplace=True)
 
 
+df['g3_cat'] = (df.G3 > 10).astype(int).replace({0:-1})
+Y_cla = df['g3_cat'].values
+
+
 fig, ax1 = plt.subplots(figsize=(10,10))
-df.hist(var_bin,ax=ax1)
+df.hist(var_bin + ['g3_cat'],ax=ax1)
 plt.show()
 plt.tight_layout()
 
@@ -161,10 +165,11 @@ axs[1,1].set_title('guardian')
 plt.show()
 
 
-df['Mjob']=pd.get_dummies(df['Mjob']).replace({0:-1}).values.tolist()
-df['Fjob']=pd.get_dummies(df['Fjob']).replace({0:-1}).values.tolist()
-df['reason']=pd.get_dummies(df['reason']).replace({0:-1}).values.tolist()
-df['guardian']=pd.get_dummies(df['guardian']).replace({0:-1}).values.tolist()
+df_nom = pd.DataFrame(index=df.index)
+df_nom['Mjob']=pd.get_dummies(df['Mjob']).replace({0:-1}).values.tolist()
+df_nom['Fjob']=pd.get_dummies(df['Fjob']).replace({0:-1}).values.tolist()
+df_nom['reason']=pd.get_dummies(df['reason']).replace({0:-1}).values.tolist()
+df_nom['guardian']=pd.get_dummies(df['guardian']).replace({0:-1}).values.tolist()
 
 #Mjob = df_por[['Mjob']]
 #from sklearn.preprocessing import OneHotEncoder
@@ -179,14 +184,21 @@ plt.tight_layout()
 
 
 plt.figure(figsize=(10,10))
-import seaborn as sns
-Cor = df[var_num].corr(method='kendall')
+Cor = df[var_int].corr(method='kendall')
 mask = np.triu(np.ones_like(Cor, dtype=bool)) # Generate a mask for the upper triangle
 ax = sns.heatmap(Cor, mask=mask, vmin=-1, vmax=+1, cmap='RdBu', linewidths=1, square=True, cbar_kws={"shrink": 0.8}) 
 plt.show()
 
 
-[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor[(abs(Cor)>0.5) & (Corget_ipython().getoutput("=1)].dropna(how='all').iterrows()]")
+[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor[(abs(Cor)>0.7) & (Corget_ipython().getoutput("=1)].dropna(how='all').iterrows()]")
+
+
+plt.scatter(df['G2'], df['G3'])
+plt.show()
+
+
+plt.scatter(df['Dalc'], df['Walc'])
+plt.show()
 
 
 [{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor[(abs(Cor)>=0.30) & (abs(Cor)<0.49) & (Corget_ipython().getoutput("=1)].dropna(how='all').iterrows()]")
@@ -195,42 +207,118 @@ plt.show()
 [{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor[(abs(Cor)<0.05) & (Corget_ipython().getoutput("=1)][['G3']].dropna(how='all').iterrows()]")
 
 
-[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor[(abs(Cor)>=0.25) & (Corget_ipython().getoutput("=1)][['G3']].dropna(how='all').iterrows()]")
+[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor[(abs(Cor)>=0.7) & (Corget_ipython().getoutput("=1)][['G3']].dropna(how='all').iterrows()]")
 
 
-from sklearn.preprocessing import StandardScaler
+plt.figure(figsize=(10,10))
+Cor_bin_num = df[var_bin+['g3_cat']+var_num].corr(method='pearson')
+mask = np.triu(np.ones_like(Cor_bin_num, dtype=bool)) # Generate a mask for the upper triangle
+ax = sns.heatmap(Cor_bin_num, mask=mask, vmin=-1, vmax=+1, cmap='RdBu', linewidths=1, square=True, cbar_kws={"shrink": 0.8}) 
+plt.show()
+
+
+[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor_bin_num[(abs(Cor_bin_num)>0.7) & (Cor_bin_numget_ipython().getoutput("=1)].dropna(how='all').iterrows()]")
+
+
+[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor_bin_num[(abs(Cor_bin_num)<0.05) & (Cor_bin_numget_ipython().getoutput("=1)][['g3_cat']].dropna(how='all').iterrows()]")
+
+
+[{k:v.dropna().sort_values(ascending=False).to_dict()} for k,v in Cor_bin_num[(abs(Cor_bin_num)<0.05) & (Cor_bin_numget_ipython().getoutput("=1)][['G3']].dropna(how='all').iterrows()]")
+
+
+dfCont = df_por[var_nom].copy()
+dfCont['g3_cat'] = (df.G3 > 10).astype(int)
+dfCont
+
+
+alpha=0.05
+cont1 = pd.crosstab(dfCont['Mjob'], dfCont['g3_cat'], margins=False)
+chi2, p, dof, ex = chi2_contingency(cont1.to_numpy(), correction=False)
+print('p-valor:', p)
+if p<alpha:
+    print(colored('Rejeitamos H0, variáveis possuem dependência linear','green'))
+else:
+    print(colored('Não rejeitamos H0','rede'))
+
+
+cont1 = pd.crosstab(dfCont['Fjob'], dfCont['g3_cat'], margins=False)
+chi2, p, dof, ex = chi2_contingency(cont1.to_numpy(), correction=False)
+print('p-valor:', p)
+if p<alpha:
+    print(colored('Rejeitamos H0, variáveis possuem dependência linear','green'))
+else:
+    print(colored('Não rejeitamos H0','rede'))
+
+
+cont1 = pd.crosstab(dfCont['reason'], dfCont['g3_cat'], margins=False)
+chi2, p, dof, ex = chi2_contingency(cont1.to_numpy(), correction=False)
+print('p-valor:', p)
+if p<alpha:
+    print(colored('Rejeitamos H0, variáveis possuem dependência linear','green'))
+else:
+    print(colored('Não rejeitamos H0','rede'))
+
+
+cont1 = pd.crosstab(dfCont['guardian'], dfCont['g3_cat'], margins=False)
+chi2, p, dof, ex = chi2_contingency(cont1.to_numpy(), correction=False)
+print('p-valor:', p)
+if p<alpha:
+    print(colored('Rejeitamos H0, variáveis possuem dependência linear','green'))
+else:
+    print(colored('Não rejeitamos H0','rede'))
+
+
+alpha=0.05
+cont1 = pd.crosstab(dfCont['Mjob'], dfCont['Fjob'], margins=False)
+chi2, p, dof, ex = chi2_contingency(cont1.to_numpy(), correction=False)
+print('p-valor:', p)
+if p<alpha:
+    print(colored('Rejeitamos H0, variáveis possuem dependência linear','green'))
+else:
+    print(colored('Não rejeitamos H0','rede'))
+
+
+cont1
+
+
+var_bin_exc = ['famsize', 'Pstatus', 'famsup' 'nursey', 'schoolsup', 'paid']
+var_nom_exc = ['Fjob']
+var = list(set(var_bin)-set(var_bin_exc)) + list(set(var_nom)-set(var_nom_exc)) + var_int[:-3]
+print(var)
+
+
+len(var)
+
+
 scalerG3 = StandardScaler().fit(df[['G3']])
-Y_num = scalerG3.transform(df[['G3']])
-Y_cat = (df.G3 > 10).astype(int).replace({0:-1}).values
+Y_reg = scalerG3.transform(df[['G3']])
 
 
 from sklearn.pipeline import Pipeline
-
 num_pipeline = Pipeline([
     ('std_scaler', StandardScaler()),
 ])
 
-# cat_pipeline = Pipeline([
-#     ('one_hot', OneHotEncoder(sparse=False)),
-# ])
-
 from sklearn.compose import ColumnTransformer
 full_pipeline = ColumnTransformer([
-    ("num", num_pipeline, var_num[:-3]),
+    ("num", num_pipeline, var_int[:-3]),
 ])
 
-df2 = pd.DataFrame(
-     data = full_pipeline.fit_transform(df_por),
-     columns = var_num[:-3])
+dfInt = pd.DataFrame(
+     data = full_pipeline.fit_transform(df),
+     columns = var_int[:-3])
 
 
 oh_Mjob=pd.get_dummies(df_por['Mjob']).replace({0:-1}).values
 oh_Fjob=pd.get_dummies(df_por['Fjob']).replace({0:-1}).values
 oh_reason=pd.get_dummies(df_por['reason']).replace({0:-1}).values
 oh_guardian=pd.get_dummies(df_por['guardian']).replace({0:-1}).values
-X = np.hstack((df2.values, df[var_bin].values, oh_Mjob, oh_Fjob, oh_reason, oh_guardian))
+
+X_pos1 = np.hstack((dfInt.values, df[var_bin].values, oh_Mjob, oh_Fjob, oh_reason, oh_guardian)) # sem exclusão de features
+X_pos2 = np.hstack((dfInt.values, df[list(set(var_bin)-set(var_bin_exc))].values, oh_Mjob, oh_reason, oh_guardian)) # com exclusão de features
 
 
-np.savetxt('X.txt',X,delimiter=',')
-np.savetxt('Y_cat.txt',Y_cat)
-np.savetxt('Y_num.txt',Y_num)
+np.savetxt('datasets/X_pos1.txt',X_pos1,delimiter=',')
+np.savetxt('datasets/X_pos2.txt',X_pos2,delimiter=',')
+np.savetxt('datasets/Y_cla.txt',Y_cla)
+np.savetxt('datasets/Y_reg.txt',Y_reg)

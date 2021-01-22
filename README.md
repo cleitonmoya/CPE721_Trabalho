@@ -13,5 +13,5 @@ Trabalho da disciplina CPE721 - Redes Neurais *Feedforward*
 
 ## Classificação binária
 - Classes: {1: Aprovado, -1: Reprovado}
-- [nn1_bin.m](nn1.m): versão básica (Matlab script)
-- [nn1_bin_kfold.m](nn1.m): com validação cruzada $k$-*fold* (Matlab script)
+- [nn1_bin.m](nn1_bin.m): versão básica (Matlab script)
+- [nn1_bin_kfold.m](nn1_bin_kfold.m): com validação cruzada k-*fold* (Matlab script)

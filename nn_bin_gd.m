@@ -1,19 +1,22 @@
+% Classificação binária - GD
+
 % Carregamento dos dados
 clear; clc; close all;
-X = transpose(readmatrix('datasets/X_d2.txt'));
-y = transpose(readmatrix('datasets/Y_bin.txt'));
-N = length(X);
-
-% Divisão do dataset para o k-fold
-seed = 42;
-rng(seed) % random generator
+load('datasets/divisao.mat', 'XA', 'y_bin')
+X = XA;
+y = y_bin;
+clear XA y_bin
 
 % Criação da rede
-hiddenLayerSize = 5;
+seed = 42;
+rng(seed) % random generator
+hiddenLayerSize = 7;
 optmizer = 'traingd';
 net = feedforwardnet(hiddenLayerSize, optmizer);
 
 % Parâmetros da rede
+net.layers{2}.transferFcn = 'tansig';
+
 net.trainParam.show = 1;
 net.trainParam.lr = 0.05;
 net.trainParam.epochs = 500;
@@ -24,7 +27,7 @@ net.divideFcn = 'divideblock';
 
 net.divideParam.trainRatio = 90/100;
 net.divideParam.valRatio = 10/100;
-net.divideParam.testRatio = 0;
+net.divideParam.testRatio = 0/100;
 
 % Treinamento
 [net,tr] = train(net,X,y);
@@ -42,13 +45,11 @@ figure, confusionchart(C, [-1,1])
 
 % Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
-figure()
 plot(tr.perf, 'LineWidth', 1)
 hold on
 plot(tr.vperf, 'LineWidth', 1)
-xline(it_min,':', 'Color', '#77AC30')
-yline(vperf_min, ':', 'Color', '#77AC30')
-
+xline(it_min,':')
+yline(vperf_min, ':')
 xlabel('Iteração')
 ylabel('Erro quadrático médio')
 legend({'Treinamento', 'Validação', 'Melhor'});

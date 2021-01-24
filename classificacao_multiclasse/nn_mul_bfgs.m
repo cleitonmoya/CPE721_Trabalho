@@ -1,19 +1,18 @@
-% Classificação multiclase - GD
+% Classificação multiclase - BFGS
 
 % Carregamento dos dados
 clear; clc; close all;
-load('datasets/divisao.mat', 'XA', 'y_mul')
+load('../datasets/divisao.mat', 'XA', 'y_mul')
 X = XA;
 y = y_mul;
 clear XA y_mul
 
-% Criação da rede
-seed = 42;
-rng(seed) % random generator
-H = 5;
-optmizer = 'trainlm';
-
+% Construção da rede
+rng(42)     % semente
+H = 5;      % número de neurônios na camada oculta
+optmizer = 'trainbfg';
 net = feedforwardnet(H, optmizer);
+
 % neurônios tanh na camada de saída (padrão: purelin)
 net.layers{2}.transferFcn = 'tansig';  
 
@@ -26,28 +25,29 @@ net = configure(net,X,y);
 % net.layerWeights{2}.initFcn = 'randsmall';
 % net.biases{1}.initFcn = 'randsmall';
 % net.biases{2}.initFcn = 'randsmall';
-net.iw{1} = inicializaPesos(5,36,H,'caloba1');
-net.lw{2,1} = inicializaPesos(5,5,H,'caloba1');
-net.b{1} = inicializaPesos(5,1,H,'caloba1'); 
-net.b{2} = inicializaPesos(5,1,H,'caloba1');
+net.iw{1} = inicializaPesos(5,36,H,'randsmall');
+net.lw{2,1} = inicializaPesos(5,5,H,'randsmall');
+net.b{1} = inicializaPesos(5,1,H,'randsmall'); 
+net.b{2} = inicializaPesos(5,1,H,'randsmall');
 
-% divisão do dataset
 net.divideFcn = 'divideblock';
 net.divideParam.trainRatio = 90/100;
 net.divideParam.valRatio = 10/100;
 net.divideParam.testRatio = 0/100;
 
-% Parâmetros gerais do treinamento
+% Parâmetros gerais de treinamento
 net.trainParam.show = 1;
-net.trainParam.epochs = 1000;
+net.trainParam.epochs = 100;
 net.trainParam.goal = 0;
-net.trainParam.max_fail = 100;
-net.trainParam.showWindow = true;
+net.trainParam.max_fail = 20;
+net.trainParam.showWindow = false;
 
-% Parâmetros específicos Levemberg-Marquadt
-net.trainParam.mu = 0.005;
-net.trainParam.mu_dec = 0.001;
-net.trainParam.mu_inc = 500;
+% Parâmetros específicos do BFGS
+net.trainParam.alpha = 0.01;
+net.trainParam.beta = 0.1;
+net.trainParam.delta = 0.01; % initial step size
+net.trainParam.low_lim = 0.1;
+net.trainParam.up_lim = 0.5;
 
 % Treinamento
 [net,tr] = train(net,X,y);

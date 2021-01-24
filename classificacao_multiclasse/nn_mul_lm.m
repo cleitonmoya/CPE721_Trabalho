@@ -2,7 +2,7 @@
 
 % Carregamento dos dados
 clear; clc; close all;
-load('datasets/divisao.mat', 'XA', 'y_mul')
+load(../'datasets/divisao.mat', 'XA', 'y_mul')
 X = XA;
 y = y_mul;
 clear XA y_mul
@@ -11,7 +11,7 @@ clear XA y_mul
 seed = 42;
 rng(seed) % random generator
 H = 5;
-optmizer = 'traingd';
+optmizer = 'trainlm';
 
 net = feedforwardnet(H, optmizer);
 % neurônios tanh na camada de saída (padrão: purelin)
@@ -31,7 +31,7 @@ net.lw{2,1} = inicializaPesos(5,5,H,'caloba1');
 net.b{1} = inicializaPesos(5,1,H,'caloba1'); 
 net.b{2} = inicializaPesos(5,1,H,'caloba1');
 
-% divisão do dataset para o treinamento
+% divisão do dataset
 net.divideFcn = 'divideblock';
 net.divideParam.trainRatio = 90/100;
 net.divideParam.valRatio = 10/100;
@@ -39,13 +39,15 @@ net.divideParam.testRatio = 0/100;
 
 % Parâmetros gerais do treinamento
 net.trainParam.show = 1;
-net.trainParam.epochs = 5000;
+net.trainParam.epochs = 1000;
 net.trainParam.goal = 0;
-net.trainParam.max_fail = 200;
+net.trainParam.max_fail = 100;
 net.trainParam.showWindow = true;
 
-% Parâmetros específicos gradiente descendente
-net.trainParam.lr = 0.4;
+% Parâmetros específicos Levemberg-Marquadt
+net.trainParam.mu = 0.005;
+net.trainParam.mu_dec = 0.001;
+net.trainParam.mu_inc = 500;
 
 % Treinamento
 [net,tr] = train(net,X,y);
@@ -63,12 +65,11 @@ figure, confusionchart(C, 1:5)
 
 % Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
-figure()
 plot(tr.perf, 'LineWidth', 1)
 hold on
 plot(tr.vperf, 'LineWidth', 1)
 xline(it_min,':')
 yline(vperf_min, ':')
-
 xlabel('Iteração')
 ylabel('Erro quadrático médio')
+legend({'Treinamento', 'Validação', 'Melhor'});

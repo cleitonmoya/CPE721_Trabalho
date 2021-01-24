@@ -1,8 +1,8 @@
-% Classificação multiclase - GD
+% Classificação multiclase - RP
 
 % Carregamento dos dados
 clear; clc; close all;
-load('datasets/divisao.mat', 'XA', 'y_mul')
+load('../datasets/divisao.mat', 'XA', 'y_mul')
 X = XA;
 y = y_mul;
 clear XA y_mul
@@ -11,7 +11,7 @@ clear XA y_mul
 seed = 42;
 rng(seed) % random generator
 H = 5;
-optmizer = 'trainlm';
+optmizer = 'trainrp';
 
 net = feedforwardnet(H, optmizer);
 % neurônios tanh na camada de saída (padrão: purelin)
@@ -19,13 +19,6 @@ net.layers{2}.transferFcn = 'tansig';
 
 % configuração e inicialização dos pesos e bias
 net = configure(net,X,y); 
-
-% net.layers{1}.initFcn = 'initwb';
-% net.layers{2}.initFcn = 'initwb';
-% net.inputWeights{1}.initFcn = 'randsmall';
-% net.layerWeights{2}.initFcn = 'randsmall';
-% net.biases{1}.initFcn = 'randsmall';
-% net.biases{2}.initFcn = 'randsmall';
 net.iw{1} = inicializaPesos(5,36,H,'caloba1');
 net.lw{2,1} = inicializaPesos(5,5,H,'caloba1');
 net.b{1} = inicializaPesos(5,1,H,'caloba1'); 
@@ -41,13 +34,14 @@ net.divideParam.testRatio = 0/100;
 net.trainParam.show = 1;
 net.trainParam.epochs = 1000;
 net.trainParam.goal = 0;
-net.trainParam.max_fail = 100;
+net.trainParam.max_fail = 50;
 net.trainParam.showWindow = true;
 
-% Parâmetros específicos Levemberg-Marquadt
-net.trainParam.mu = 0.005;
-net.trainParam.mu_dec = 0.001;
-net.trainParam.mu_inc = 500;
+% Parâmetros específicos Resilient Backpropagation
+net.trainParam.delt_inc = 1.2;
+net.trainParam.delt_dec = 0.5;
+net.trainParam.delta0 = 0.07;
+net.trainParam.deltamax = 50;
 
 % Treinamento
 [net,tr] = train(net,X,y);

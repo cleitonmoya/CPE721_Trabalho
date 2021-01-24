@@ -2,7 +2,7 @@
 
 % Carrega o dataset
 clear; close all; clc;
-load('datasets/divisao.mat', 'XA', 'y_bin')
+load('../datasets/divisao.mat', 'XA', 'y_bin')
 X = XA;
 y = y_bin;
 clear XA y_bin

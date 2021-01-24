@@ -3,15 +3,15 @@
 clear;
 
 % Carregamento dos dados
-X_A = transpose(readmatrix('datasets/X_A2.txt'));
-X_B = transpose(readmatrix('datasets/X_B2.txt'));
-X_C = transpose(readmatrix('datasets/X_C2.txt'));
-X_D = transpose(readmatrix('datasets/X_D2.txt'));
+X_A = transpose(readmatrix('../datasets/X_A2.txt'));
+X_B = transpose(readmatrix('../datasets/X_B2.txt'));
+X_C = transpose(readmatrix('../datasets/X_C2.txt'));
+X_D = transpose(readmatrix('../datasets/X_D2.txt'));
 
-Y_bin = transpose(readmatrix('datasets/Y_bin.txt'));
-Y_mul = transpose(readmatrix('datasets/Y_mul.txt'));    % Codificação maximamente esparsa
-Y_mul2 = transpose(readmatrix('datasets/Y_mul2.txt'));  % Categorias ordinais 
-Y_reg = transpose(readmatrix('datasets/Y_reg.txt'));
+Y_bin = transpose(readmatrix('../datasets/Y_bin.txt'));
+Y_mul = transpose(readmatrix('../datasets/Y_mul.txt'));    % Codificação maximamente esparsa
+Y_mul2 = transpose(readmatrix('../datasets/Y_mul2.txt'));  % Categorias ordinais 
+Y_reg = transpose(readmatrix('../datasets/Y_reg.txt'));
 
 % Separação dos teste
 rng(42) % random generator

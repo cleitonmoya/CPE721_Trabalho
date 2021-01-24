@@ -1,11 +1,11 @@
-% Classificação multiclasse - BFGS - K-fold
+% Classificação binária - Levemberg-Marquadt - K-fold
 
 % Carrega o dataset
-clear; clc; close all;
-load('datasets/divisao.mat', 'XA', 'y_mul')
+clear; close all; clc;
+load('../datasets/divisao.mat', 'XA', 'y_bin')
 X = XA;
-y = y_mul;
-clear XA y_mul
+y = y_bin;
+clear XA y_bin
 
 % Separação de X em treinamento e validação (k-fold)
 N = length(X);
@@ -15,56 +15,64 @@ rng(seed) % random generator
 cv = cvpartition(N,'Kfold',K);
 
 % Hiperparâmetros
-p1 = [0.001 0.01 0.05];
-p2 = [0.001 0.01 0.1];
+mu_0 = [0.001, 0.005, 0.01];
+mu_f = [10, 100, 500, 1000];
 
 % vetores auxiliares
-acc_m = zeros(length(p1),length(p2));    % acurácia média de cada modelo m
-std_m = zeros(length(p1),length(p2));    % desvio padrão da acurácia de cada modelo
-tr_m = cell(length(p1),length(p2));      % resultados do treinamento para cada modelo
+acc_m = zeros(length(mu_0),length(mu_f));    % acurácia média de cada modelo m
+std_m = zeros(length(mu_0),length(mu_f));    % desvio padrão da acurácia de cada modelo
+tr_m = cell(length(mu_0),length(mu_f));      % resultados do treinamento para cada modelo
 
-for i = 1:length(p1)
+for i = 1:length(mu_0)
        
-    for j = 1:length(p2)
+    p1 = mu_0(i);
+    
+    for j = 1:length(mu_f)
 
-        C_total = zeros(5,5);   % matriz de confusão
+        p2 = mu_f(j);
+
+        C_total = zeros(2,2);   % matriz de confusão
         acc_k = zeros(1,K);     % acurácia de cada fold 
 
         % Loop do k-fold
         for k=1:K
             % Datasets de treinamento e validação
             X_tr = X(:,training(cv,k));
-            y_tr = y(:, training(cv,k));
+            y_tr = y(training(cv,k));
+
             X_vl = X(:,test(cv,k));
-            y_vl = y(:, test(cv,k));
+            y_vl = y(test(cv,k));
 
             % Junção dos data-sets para entrada do modelo
             X2 = [X_tr, X_vl];
             y2 = [y_tr, y_vl];
 
             % Criação da rede
-            hiddenLayerSize = 5;
-            optmizer = 'trainbfg';
+            hiddenLayerSize = 3;
+            optmizer = 'trainlm';
             net = feedforwardnet(hiddenLayerSize, optmizer);
-            net.layers{2}.transferFcn = 'tansig';   % Seta o último neurônio como tangente hiperbólico
-            net = configure(net,'output',y);        % configura a rede com o número de entradas/saídas
+
+            % Parâmetros da rede
+            net.layers{2}.transferFcn = 'tansig'; % Seta o último neurônio como tangente hiperbólico
+            net.trainParam.show = 1;
             
+            % Parâmetros gerais do treinamento
+            net.trainParam.epochs = 500;
+            net.trainParam.goal = 1e-2;
+            net.trainParam.max_fail = 10;
+            net.trainParam.showWindow = false;
+            
+            % divisão do dataset
             net.divideFcn = 'divideblock';
             net.divideParam.trainRatio = (100-K)/100;
             net.divideParam.valRatio = K/100;
             net.divideParam.testRatio = 0;
             
-            % Paraâmetros gerais de treinamento
-            net.trainParam.show = 1;
-            net.trainParam.epochs = 100;
-            net.trainParam.goal = 0;
-            net.trainParam.max_fail = 100;
-            net.trainParam.showWindow = true;
-
-            % Parâmetros específicos do BFGS
-            net.trainParam.alpha = p1(i);
-            net.trainParam.beta = p2(j);
-
+            % Parâmetros específicos Levemberg-Marquadt
+            net.trainParam.mu = p1;
+            net.trainParam.mu_dec = p2/1000;
+            net.trainParam.mu_inc = p2;
+            
             % Treinamento
             [net,tr] = train(net,X2,y2);
             tr_m{i,j} = tr;
@@ -88,18 +96,21 @@ for i = 1:length(p1)
         % Acurácia - média do modelo h para K-folds:
         acc_m(i,j) = mean(acc_k);
         std_m(i,j) = std(acc_k);
-        fprintf('mu0 = %d, mu_f = %d: Acurácia média %d-folds: (%.4f ± %.4f)\n', p1(i), p2(j), K, acc_m(i,j), std_m(i,j))
+        fprintf('mu0 = %d, mu_f = %d: Acurácia média %d-folds: (%.4f ± %.4f)\n', p1, p2, K, acc_m(i,j), std_m(i,j))
     end
 end
 
+%%
 % Modelo com a melhor performance (validação)
 max_acc = max(acc_m, [], 'all');
 [i,j] = find(acc_m == max_acc);
-i=i(1);
-j=j(1);
+i=i(2);
+j=j(2);
 tr = tr_m{i,j};
-fprintf('Melhores parâmetros: p1= %d, p2 = %d, acc=(%.4f ± %.4f)\n', p1(i), p2(j), acc_m(i,j), std_m(i,j))
+fprintf('Melhores parâmetros: p1= %d, p2 = %d, acc=(%.4f ± %.4f)\n', mu_0(i), mu_f(j), acc_m(i,j), std_m(i,j))
 
+
+%%
 % Evolução do treinamento - Último fold do melhor modelo
 [vperf_min, it_min] = min(tr.vperf);
 plot(tr.perf, 'LineWidth', 1)
@@ -111,4 +122,3 @@ xlabel('Iteração')
 ylabel('Erro quadrático médio')
 legend({'Treinamento', 'Validação', 'Melhor'});
 
-% Matriz de confusão

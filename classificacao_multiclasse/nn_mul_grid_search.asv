@@ -1,15 +1,16 @@
-% Grid Search - Classificação Binária
+% Grid Search - Classificação Multiclasse
 
 clear; close all; clc;
 
 % Carrega o dataset
-load('../datasets/divisao.mat', 'XA', 'y_bin', 'XA_te', 'y_bin_te')
+load('../datasets/divisao.mat', 'XA', 'y_mul', 'XA_te', 'y_mul_te')
 X = XA;
-y = y_bin;
+y = y_mul;
 X_te = XA_te;
-y_te = y_bin_te;
-clear XA y_bin XD_te y_bin_te
-[n_feat, ~] = size(X); % número de features
+y_te = y_mul_te;
+clear XA y_mul XA_te y_mul_te
+[n_feat, ~] = size(X);  % número de features
+[n_out, ~] = size(y);   % número de saídas
 
 % Separação de X em treinamento e validação (k-fold)
 N = length(X);
@@ -82,10 +83,10 @@ for o = 1:numel(O)
                     for k=1:K
                         % Datasets de treinamento e validação
                         X_tr = X(:,training(cv,k));
-                        y_tr = y(training(cv,k));
+                        y_tr = y(:,training(cv,k));
 
                         X_vl = X(:,test(cv,k));
-                        y_vl = y(test(cv,k));
+                        y_vl = y(:,test(cv,k));
 
                         % Junção dos data-sets para entrada do modelo
                         X2 = [X_tr, X_vl];
@@ -99,9 +100,9 @@ for o = 1:numel(O)
                         net = configure(net,X,y);
                         if ~strcmp(ini, 'default')
                             net.iw{1} = inicializaPesos(h,n_feat,h,ini);
-                            net.lw{2,1} = inicializaPesos(1,h,h,ini);
+                            net.lw{2,1} = inicializaPesos(n_out,h,h,ini);
                             net.b{1} = inicializaPesos(h,1,h,ini); 
-                            net.b{2} = inicializaPesos(1,1,h,ini);
+                            net.b{2} = inicializaPesos(n_out,1,h,ini);
                         end
 
                         % Divisão do dataset
@@ -203,9 +204,24 @@ tr_ws = ws.tr;
 figure()
 title('Performance - classif. binária')
 
+otimizadores = {'GD', 'LM', 'BFGS', 'RPROP'};
+[idx_mod_ws, ~] = ismember(O, ws.o);
+otm_ws = otimizadores(idx_mod_ws);
+otm_ws = otm_ws{1};
+
+[idx_ini_ws, ~] = ismember(I, ws.i);
+ini_ws = bin2dec(num2str(idx_ini_ws));
+
+[idx_mod_bs, ~] = ismember(O, bs.o);
+otm_bs = otimizadores(idx_mod_bs);
+otm_bs = otm_bs{1};
+
+[idx_ini_bs, ~] = ismember(I, bs.i);
+ini_bs = bin2dec(num2str(idx_ini_bs));
+
 % Melhor modelo
 subplot(2,1,1)
-subtitle('Melhor modelo: RPROP, H=6, inic. tipo 2')
+subtitle(compose('Melhor modelo: %s, H=%d, inic. tipo %d', otm_bs, bs.h, ini_bs)
 hold on
 plot(tr_bs.perf, 'LineWidth', 1)
 plot(tr_bs.vperf, 'LineWidth', 1)
@@ -217,7 +233,7 @@ legend({'Treinamento', 'Validação', 'Menor erro (valid.)'});
 
 % Pior modelo
 subplot(2,1,2)
-subtitle('Pior modelo: GD, H=3, inic. tipo 3')
+subtitle(compose('Melhor modelo: %s, H=%d, inic. tipo %d', otm_ws, ws.h, ini_ws))
 hold on
 plot(tr_ws.perf, 'LineWidth', 1)
 plot(tr_ws.vperf, 'LineWidth', 1)
@@ -234,12 +250,12 @@ net = bs.net;
 
 % Matriz de confusão e erro
 g = net(X_te); % predição
-[error, ~, ~, ~] = confusion(heaviside(y_te),heaviside(g));
+[error, C, ~, ~] = confusion(heaviside(y_te),heaviside(g));
 acc = 1-error;
 fprintf('Acurácia final no conjunto de teste: %f\n',acc)
 
-figure() 
-cm = confusionchart(y_te, sat(g));
+figure()
+cm = confusionchart(C,1:5);
 cm.RowSummary = 'row-normalized';
 title(compose('Classif. binária - Acurácia final: %.1f%% (conjunto de teste)',acc*100));
 xlabel('Classe predita')
@@ -252,9 +268,3 @@ view(net)
 % Diagrama de Hinton
 figure()
 plotwb(net)
-
-function y = sat(x)
-    x1 = (x>=0)*1;
-    x2 = (x<0)*-1;
-    y=x1+x2;
-end

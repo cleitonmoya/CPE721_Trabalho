@@ -3,12 +3,12 @@
 clear; close all; clc;
 
 % Carrega o dataset
-load('../datasets/divisao.mat', 'XD', 'y_bin', 'XD_te', 'y_bin_te')
-X = XD;
-y = y_bin;
-X_te = XD_te;
-y_te = y_bin_te;
-clear XC y_bin XD_te y_bin_te
+load('../datasets/divisao.mat', 'XA', 'y_mul', 'XA_te', 'y_mul_te')
+X = XA;
+y = y_mul;
+X_te = XA_te;
+y_te = y_mul_te;
+clear XA y_mul XA_te y_mul_te
 [n_feat, ~] = size(X); % número de features
 
 % Separação de X em treinamento e validação (k-fold)
@@ -82,10 +82,10 @@ for o = 1:numel(O)
                     for k=1:K
                         % Datasets de treinamento e validação
                         X_tr = X(:,training(cv,k));
-                        y_tr = y(training(cv,k));
+                        y_tr = y(:,training(cv,k));
 
                         X_vl = X(:,test(cv,k));
-                        y_vl = y(test(cv,k));
+                        y_vl = y(:,test(cv,k));
 
                         % Junção dos data-sets para entrada do modelo
                         X2 = [X_tr, X_vl];

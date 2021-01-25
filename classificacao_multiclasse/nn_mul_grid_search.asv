@@ -3,12 +3,12 @@
 clear; close all; clc;
 
 % Carrega o dataset
-load('../datasets/divisao.mat', 'XD', 'y_bin', 'XD_te', 'y_bin_te')
-X = XD;
+load('../datasets/divisao.mat', 'XA', 'y_bin', 'XA_te', 'y_bin_te')
+X = XA;
 y = y_bin;
-X_te = XD_te;
+X_te = XA_te;
 y_te = y_bin_te;
-clear XC y_bin XD_te y_bin_te
+clear XA y_bin XD_te y_bin_te
 [n_feat, ~] = size(X); % número de features
 
 % Separação de X em treinamento e validação (k-fold)

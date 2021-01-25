@@ -18,14 +18,7 @@ net = feedforwardnet(H, optmizer);
 net.layers{2}.transferFcn = 'tansig';  
 
 % configuração e inicialização dos pesos e bias
-net = configure(net,X,y); 
-
-% net.layers{1}.initFcn = 'initwb';
-% net.layers{2}.initFcn = 'initwb';
-% net.inputWeights{1}.initFcn = 'randsmall';
-% net.layerWeights{2}.initFcn = 'randsmall';
-% net.biases{1}.initFcn = 'randsmall';
-% net.biases{2}.initFcn = 'randsmall';
+net = configure(net,X,y);
 net.iw{1} = inicializaPesos(5,36,H,'caloba1');
 net.lw{2,1} = inicializaPesos(5,5,H,'caloba1');
 net.b{1} = inicializaPesos(5,1,H,'caloba1'); 

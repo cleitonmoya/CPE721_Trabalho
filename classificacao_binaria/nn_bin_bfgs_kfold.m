@@ -45,27 +45,34 @@ for i = 1:length(p1)
             y2 = [y_tr, y_vl];
 
             % Criação da rede
-            hiddenLayerSize = 3;
+            H = 3;
             optmizer = 'trainbfg';
-            net = feedforwardnet(hiddenLayerSize, optmizer);
-
-            % Parâmetros da rede
+            net = feedforwardnet(H, optmizer);
             net.layers{2}.transferFcn = 'tansig'; % Seta o último neurônio como tangente hiperbólico
+            
+            % Configuração e inicialização dos pesos e bias
+            net = configure(net,X,y);
+            net.iw{1} = inicializaPesos(H,36,H,'caloba2');
+            net.lw{2,1} = inicializaPesos(1,H,H,'caloba2');
+            net.b{1} = inicializaPesos(H,1,H,'caloba2'); 
+            net.b{2} = inicializaPesos(1,1,H,'caloba2');
+            
+            % Divisão do dataset
+            net.divideFcn = 'divideblock';
+            net.divideParam.trainRatio = (100-K)/100;
+            net.divideParam.valRatio = K/100;
+            net.divideParam.testRatio = 0;
+            
+            % Parâmetros gerais do treinamento
+            net.trainParam.show = 1;
+            net.trainParam.epochs = 100;
+            net.trainParam.goal = 0;
+            net.trainParam.max_fail = 10;
+            net.trainParam.showWindow = true;
             
             % Parâmetros específicos do BFGS
             net.trainParam.alpha = p1(i);
             net.trainParam.beta = p2(j);
-            
-            net.trainParam.show = 1;
-            net.trainParam.epochs = 500;
-            net.trainParam.goal = 1e-2;
-            net.trainParam.max_fail = 10;
-            net.trainParam.showWindow = false;
-            net.divideFcn = 'divideblock';
-
-            net.divideParam.trainRatio = (100-K)/100;
-            net.divideParam.valRatio = K/100;
-            net.divideParam.testRatio = 0;
 
             % Treinamento
             [net,tr] = train(net,X2,y2);
@@ -94,7 +101,6 @@ for i = 1:length(p1)
     end
 end
 
-%%
 % Modelo com a melhor performance (validação)
 max_acc = max(acc_m, [], 'all');
 [i,j] = find(acc_m == max_acc);
@@ -103,10 +109,9 @@ j=j(1);
 tr = tr_m{i,j};
 fprintf('Melhores parâmetros: p1= %d, p2 = %d, acc=(%.4f ± %.4f)\n', p1(i), p2(j), acc_m(i,j), std_m(i,j))
 
-
-%%
-% Evolução do treinamento - Último fold do melhor modelo
+% Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
+figure()
 plot(tr.perf, 'LineWidth', 1)
 hold on
 plot(tr.vperf, 'LineWidth', 1)

@@ -1,4 +1,4 @@
-% Classificação binária - GD
+% Classificação binária - Gradiente Descendente
 
 % Carregamento dos dados
 clear; clc; close all;
@@ -10,24 +10,33 @@ clear XA y_bin
 % Criação da rede
 seed = 42;
 rng(seed) % random generator
-hiddenLayerSize = 7;
+H = 7;
 optmizer = 'traingd';
-net = feedforwardnet(hiddenLayerSize, optmizer);
-
-% Parâmetros da rede
+net = feedforwardnet(H, optmizer);
 net.layers{2}.transferFcn = 'tansig';
 
-net.trainParam.show = 1;
-net.trainParam.lr = 0.05;
-net.trainParam.epochs = 500;
-net.trainParam.goal = 1e-1;
-net.trainParam.max_fail = 5;
-net.trainParam.showWindow = 0;
-net.divideFcn = 'divideblock';
+% configuração e inicialização dos pesos e bias
+net = configure(net,X,y);
+% net.iw{1} = inicializaPesos(H,36,H,'caloba2');
+% net.lw{2,1} = inicializaPesos(1,H,H,'caloba2');
+% net.b{1} = inicializaPesos(H,1,H,'caloba2'); 
+% net.b{2} = inicializaPesos(1,1,H,'caloba2');
 
+% divisão do dataset
+net.divideFcn = 'divideblock';
 net.divideParam.trainRatio = 90/100;
 net.divideParam.valRatio = 10/100;
 net.divideParam.testRatio = 0/100;
+
+% Parâmetros gerais do treinamento
+net.trainParam.show = 1;
+net.trainParam.epochs = 1000;
+net.trainParam.goal = 0;
+net.trainParam.max_fail = 100;
+net.trainParam.showWindow = true;
+
+% Parâmetros específicos gradiente descendente
+net.trainParam.lr = 0.05;
 
 % Treinamento
 [net,tr] = train(net,X,y);
@@ -45,6 +54,7 @@ figure, confusionchart(C, [-1,1])
 
 % Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
+figure()
 plot(tr.perf, 'LineWidth', 1)
 hold on
 plot(tr.vperf, 'LineWidth', 1)

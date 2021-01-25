@@ -12,10 +12,8 @@ seed = 42;
 rng(seed) % random generator
 H = 5;
 optmizer = 'trainrp';
-
 net = feedforwardnet(H, optmizer);
-% neurônios tanh na camada de saída (padrão: purelin)
-net.layers{2}.transferFcn = 'tansig';  
+net.layers{2}.transferFcn = 'tansig';   % neurônios tanh na camada de saída (padrão: purelin)
 
 % configuração e inicialização dos pesos e bias
 net = configure(net,X,y); 

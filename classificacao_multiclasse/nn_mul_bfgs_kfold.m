@@ -109,8 +109,9 @@ j=j(1);
 tr = tr_m{i,j};
 fprintf('Melhores parâmetros: p1= %d, p2 = %d, acc=(%.4f ± %.4f)\n', p1(i), p2(j), acc_m(i,j), std_m(i,j))
 
-% Evolução do treinamento - Último fold do melhor modelo
+% Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
+figure()
 plot(tr.perf, 'LineWidth', 1)
 hold on
 plot(tr.vperf, 'LineWidth', 1)

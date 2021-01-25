@@ -40,7 +40,7 @@ net.trainParam.show = 1;
 net.trainParam.epochs = 100;
 net.trainParam.goal = 0;
 net.trainParam.max_fail = 20;
-net.trainParam.showWindow = false;
+net.trainParam.showWindow = true;
 
 % Parâmetros específicos do BFGS
 net.trainParam.alpha = 0.01;

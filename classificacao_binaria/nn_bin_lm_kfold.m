@@ -15,21 +15,18 @@ rng(seed) % random generator
 cv = cvpartition(N,'Kfold',K);
 
 % Hiperparâmetros
-mu_0 = [0.001, 0.005, 0.01];
-mu_f = [10, 100, 500, 1000];
+p1 = [0.001, 0.005, 0.01]; % mu0
+p2 = [10, 100, 500, 1000]; % incremento / decremento
 
 % vetores auxiliares
-acc_m = zeros(length(mu_0),length(mu_f));    % acurácia média de cada modelo m
-std_m = zeros(length(mu_0),length(mu_f));    % desvio padrão da acurácia de cada modelo
-tr_m = cell(length(mu_0),length(mu_f));      % resultados do treinamento para cada modelo
+acc_m = zeros(length(p1),length(p2));    % acurácia média de cada modelo m
+std_m = zeros(length(p1),length(p2));    % desvio padrão da acurácia de cada modelo
+tr_m = cell(length(p1),length(p2));      % resultados do treinamento para cada modelo
 
-for i = 1:length(mu_0)
+for i = 1:length(p1)
        
-    p1 = mu_0(i);
     
-    for j = 1:length(mu_f)
-
-        p2 = mu_f(j);
+    for j = 1:length(p2)
 
         C_total = zeros(2,2);   % matriz de confusão
         acc_k = zeros(1,K);     % acurácia de cada fold 
@@ -48,31 +45,36 @@ for i = 1:length(mu_0)
             y2 = [y_tr, y_vl];
 
             % Criação da rede
-            hiddenLayerSize = 3;
+            H = 3;
             optmizer = 'trainlm';
-            net = feedforwardnet(hiddenLayerSize, optmizer);
-
-            % Parâmetros da rede
+            net = feedforwardnet(H, optmizer);
             net.layers{2}.transferFcn = 'tansig'; % Seta o último neurônio como tangente hiperbólico
-            net.trainParam.show = 1;
             
-            % Parâmetros gerais do treinamento
-            net.trainParam.epochs = 500;
-            net.trainParam.goal = 1e-2;
-            net.trainParam.max_fail = 10;
-            net.trainParam.showWindow = false;
+            % Configuração e inicialização dos pesos e bias
+            net = configure(net,X,y);
+            net.iw{1} = inicializaPesos(H,36,H,'caloba2');
+            net.lw{2,1} = inicializaPesos(1,H,H,'caloba2');
+            net.b{1} = inicializaPesos(H,1,H,'caloba2'); 
+            net.b{2} = inicializaPesos(1,1,H,'caloba2');
             
-            % divisão do dataset
+            % Divisão do dataset
             net.divideFcn = 'divideblock';
             net.divideParam.trainRatio = (100-K)/100;
             net.divideParam.valRatio = K/100;
             net.divideParam.testRatio = 0;
             
-            % Parâmetros específicos Levemberg-Marquadt
-            net.trainParam.mu = p1;
-            net.trainParam.mu_dec = p2/1000;
-            net.trainParam.mu_inc = p2;
+            % Parâmetros gerais do treinamento
+            net.trainParam.show = 1;
+            net.trainParam.epochs = 100;
+            net.trainParam.goal = 1e-2;
+            net.trainParam.max_fail = 10;
+            net.trainParam.showWindow = true;
             
+            % Parâmetros específicos Levemberg-Marquadt
+            net.trainParam.mu = p1(i);
+            net.trainParam.mu_dec = p2(j)/1000;
+            net.trainParam.mu_inc = p2(j);
+
             % Treinamento
             [net,tr] = train(net,X2,y2);
             tr_m{i,j} = tr;
@@ -96,23 +98,21 @@ for i = 1:length(mu_0)
         % Acurácia - média do modelo h para K-folds:
         acc_m(i,j) = mean(acc_k);
         std_m(i,j) = std(acc_k);
-        fprintf('mu0 = %d, mu_f = %d: Acurácia média %d-folds: (%.4f ± %.4f)\n', p1, p2, K, acc_m(i,j), std_m(i,j))
+        fprintf('mu0 = %d, mu_f = %d: Acurácia média %d-folds: (%.4f ± %.4f)\n', p1(i), p2(j), K, acc_m(i,j), std_m(i,j))
     end
 end
 
-%%
 % Modelo com a melhor performance (validação)
 max_acc = max(acc_m, [], 'all');
 [i,j] = find(acc_m == max_acc);
-i=i(2);
-j=j(2);
+i=i(1);
+j=j(1);
 tr = tr_m{i,j};
-fprintf('Melhores parâmetros: p1= %d, p2 = %d, acc=(%.4f ± %.4f)\n', mu_0(i), mu_f(j), acc_m(i,j), std_m(i,j))
+fprintf('Melhores parâmetros: p1= %d, p2 = %d, acc=(%.4f ± %.4f)\n', p1(i), p2(j), acc_m(i,j), std_m(i,j))
 
-
-%%
-% Evolução do treinamento - Último fold do melhor modelo
+% Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
+figure()
 plot(tr.perf, 'LineWidth', 1)
 hold on
 plot(tr.vperf, 'LineWidth', 1)

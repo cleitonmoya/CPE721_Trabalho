@@ -10,17 +10,17 @@ clear XA y_reg
 % Criação da rede
 seed = 42;
 rng(seed) % random generator
-H = 5;
+H = 6;
 optmizer = 'traingd';
 net = feedforwardnet(H, optmizer);
 net.layers{2}.transferFcn = 'purelin'; % neurônio linear na camada de saída
 
 % Configuração e inicialização dos pesos e bias
 net = configure(net,X,y); 
-net.iw{1} = inicializaPesos(5,36,H,'caloba1');
-net.lw{2,1} = inicializaPesos(1,5,H,'caloba1');
-net.b{1} = inicializaPesos(5,1,H,'caloba1'); 
-net.b{2} = inicializaPesos(1,1,H,'caloba1');
+% net.iw{1} = inicializaPesos(H,36,H,'default');
+% net.lw{2,1} = inicializaPesos(1,H,H,'default');
+% net.b{1} = inicializaPesos(H,1,H,'default'); 
+% net.b{2} = inicializaPesos(1,1,H,'default');
 
 % Divisão do dataset
 net.divideFcn = 'divideblock';
@@ -46,9 +46,9 @@ fprintf('RMSE: %.4f\n',sqrt(tr.best_vperf))
 
 % Evolução do treinamento
 [vperf_min, it_min] = min(tr.vperf);
-plot(tr.perf, 'LineWidth', 1)
+semilogy(tr.perf, 'LineWidth', 1)
 hold on
-plot(tr.vperf, 'LineWidth', 1)
+semilogy(tr.vperf, 'LineWidth', 1)
 xline(it_min,':')
 yline(vperf_min, ':')
 xlabel('Iteração')

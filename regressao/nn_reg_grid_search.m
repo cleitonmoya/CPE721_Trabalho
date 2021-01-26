@@ -1,14 +1,14 @@
-% Grid Search - Classificação Multiclasse
+% Grid Search - Regressão
 
 clear; close all; clc;
 
 % Carrega o dataset
-load('../datasets/divisao.mat', 'XA', 'y_mul', 'XA_te', 'y_mul_te')
-X = XA;
-y = y_mul;
-X_te = XA_te;
-y_te = y_mul_te;
-clear XA y_mul XA_te y_mul_te
+load('../datasets/divisao.mat', 'XC', 'y_reg', 'XC_te', 'y_reg_te')
+X = XC;
+y = y_reg;
+X_te = XC_te;
+y_te = y_reg_te;
+clear XC y_reg XC_te y_reg_te
 [n_feat, ~] = size(X);  % número de features
 [n_out, ~] = size(y);   % número de saídas
 
@@ -19,17 +19,18 @@ rng(42)  % random generator
 cv = cvpartition(N,'Kfold',K);
 
 % Hiperparâmetros principais
-O = {'traingd', 'trainlm', 'trainbfg', 'trainrp'};  % otimizador
+O = {'trainbfg', 'traingd', 'trainlm', 'trainrp'};  % otimizador
 I = {'default', 'caloba1', 'caloba2'};              % método de inicialização dos pesos e bias
 H = [3, 4, 5, 6, 7];                                % número de neurônios na camada oculta
 
 % Estruturas para a melhor e pior solução encontrada na busca
-bs = struct('o', [], 'i', [], 'h', [], 'p1', [], 'p2', [], 'acc', 0, 'sd', 0, 'net', [], 'tr', [], 'te', []);
-ws = struct('o', [], 'i', [], 'h', [], 'p1', [], 'p2', [], 'acc', 1, 'sd', 0, 'net', [], 'tr', [], 'te', []);
+bs = struct('o', [], 'i', [], 'h', [], 'p1', [], 'p2', [], 'rmse', 100, 'sd', 0, 'net', [], 'tr', [], 'te', []);
+ws = struct('o', [], 'i', [], 'h', [], 'p1', [], 'p2', [], 'rmse', 0, 'sd', 0, 'net', [], 'tr', [], 'te', []);
 
 % Loop dos otimizadores
 it = 1;
 
+tr=[];
 tiBusca = tic;
 for o = 1:numel(O)
     
@@ -41,7 +42,7 @@ for o = 1:numel(O)
     P2 = [];
     switch opt
         case 'traingd'
-            P1 = [0.05, 0.1, 0.2];      % taxa de aprendizado
+            P1 = [0.01];                % taxa de aprendizado
             P2 = [1];
         case 'trainlm'
             P1 = [0.001, 0.005, 0.01];  % mu0
@@ -58,6 +59,9 @@ for o = 1:numel(O)
     for p = 1:numel(I)
         
         ini = I{p};
+%         if p==1 && o==1
+%             continue % pula BFGS com inicialização default
+%         end
         fprintf('\tavaliando inicialização %s\n', ini);
 
         % Loop do número de neurônios da camada oculta
@@ -72,13 +76,14 @@ for o = 1:numel(O)
                 for j = 1:length(P2)
                     p2 = P2(j);
                     C_total = zeros(2,2);   % matriz de confusão
-                    acc_k = zeros(1,K);     % acurácia de cada fold 
+                    mse_k = zeros(1,K);     % acurácia de cada fold 
 
                     if mod(it,10)==0
-                        fprintf('\titeração: %d, melhor acc=%.4f, te=%.0fs\n', it, bs.acc, toc(tiBusca))
+                        fprintf('\titeração: %d, melhor rmse=%.4f, te=%.0fs\n', it, bs.rmse, toc(tiBusca))
                     end
 
                     % Loop do k-fold
+                    rmse_k = zeros(1,K);
                     tiFold = tic;
                     for k=1:K
                         % Datasets de treinamento e validação
@@ -94,7 +99,7 @@ for o = 1:numel(O)
 
                         % Criação da rede
                         net = feedforwardnet(h, opt);
-                        net.layers{2}.transferFcn = 'tansig'; % Seta o último neurônio como tangente hiperbólico
+                        % net.layers{2}.transferFcn = 'tansig'; % Seta o último neurônio como tangente hiperbólico
 
                         % Configuração e inicialização dos pesos e bias
                         net = configure(net,X,y);
@@ -104,7 +109,7 @@ for o = 1:numel(O)
                             net.b{1} = inicializaPesos(h,1,h,ini); 
                             net.b{2} = inicializaPesos(n_out,1,h,ini);
                         end
-
+            
                         % Divisão do dataset
                         net.divideFcn = 'divideblock';
                         net.divideParam.trainRatio = (100-K)/100;
@@ -132,6 +137,7 @@ for o = 1:numel(O)
                             case 'trainbfg'
                                 net.trainParam.alpha = p1;
                                 net.trainParam.beta = p2;
+                                net.trainParam.max_fail = 10;
                             case 'trainrp'
                                 net.trainParam.delt_inc = p1;
                                 net.trainParam.delt_dec = p2;
@@ -142,27 +148,23 @@ for o = 1:numel(O)
                         % Treinamento
                         [net,tr] = train(net,X2,y2);
 
-                        % Erro de classificação (na validação)
-                        X_vl2 = X2(:,tr.valInd);
-                        y_vl2 = y2(:,tr.valInd);
-                        g = net(X_vl2); % predição
-                        [error, ~, ~, ~] = confusion(heaviside(y_vl2),heaviside(g));
-                        acc_k(k) = 1-error;
+                        % Erro na validação (rmse)
+                        rmse_k(k) = sqrt(tr.best_vperf);
                     end
                     tFold = toc(tiFold);
 
                     % Acurácia - média do modelo para K-folds:
-                    acc_m = mean(acc_k);
-                    std_m = std(acc_k);
+                    rmse_m = mean(rmse_k);
+                    std_m = std(rmse_k);
                     
                     % Se encontrou melhor solução, atualiza 'bs'
-                    if acc_m > bs.acc
+                    if rmse_m < bs.rmse
                         bs.o = opt;
                         bs.i = ini;
                         bs.h = h;
                         bs.p1 = p1;
                         bs.p2 = p2;
-                        bs.acc = acc_m;
+                        bs.rmse = rmse_m;
                         bs.sd = std_m;
                         bs.net = net;
                         bs.tr = tr;
@@ -170,13 +172,13 @@ for o = 1:numel(O)
                     end
  
                     % Se encontrou pior solução, atualiza 'ws'
-                    if acc_m < ws.acc
+                    if rmse_m > ws.rmse
                         ws.o = opt;
                         ws.i = ini;
                         ws.h = h;
                         ws.p1 = p1;
                         ws.p2 = p2;
-                        ws.acc = acc_m;
+                        ws.rmse = rmse_m;
                         ws.sd = std_m;
                         ws.net = net;
                         ws.tr = tr;
@@ -193,8 +195,8 @@ tBusca = toc(tiBusca);
 %%
 % Modelos com a melhor e pior performance performance (validação)
 fprintf('\nBusca concluída em %.0fs, %d modelos avaliados.\n', tBusca, it)
-fprintf('Melhor modelo encontrado: opt=%s, ini=%s, h=%d, p1=%.4f, p2=%.4f, acc=(%.4f ± %.4f), te=%.0fs\n', bs.o, bs.i, bs.h, bs.p1, bs.p2, bs.acc, bs.sd, bs.te)
-fprintf('Pior modelo encontrado: opt=%s, ini=%s, h=%d, p1=%.4f, p2=%.4f, acc=(%.4f ± %.4f), te=%.0fs\n', ws.o, ws.i, ws.h, ws.p1, ws.p2, ws.acc, ws.sd, ws.te)
+fprintf('Melhor modelo encontrado: opt=%s, ini=%s, h=%d, p1=%.4f, p2=%.4f, rmse=(%.4f ± %.4f), te=%.0fs\n', bs.o, bs.i, bs.h, bs.p1, bs.p2, bs.rmse, bs.sd, bs.te)
+fprintf('Pior modelo encontrado: opt=%s, ini=%s, h=%d, p1=%.4f, p2=%.4f, rmse=(%.4f ± %.4f), te=%.0fs\n', ws.o, ws.i, ws.h, ws.p1, ws.p2, ws.rmse, ws.sd, ws.te)
 
 %%
 % Evolução do treinamento no último fold do melhor e pior modelo
@@ -202,30 +204,30 @@ tr_bs = bs.tr;
 tr_ws = ws.tr;
 
 figure()
-title('Performance - classif. binária')
+title('Performance - regressão')
 
-otimizadores = {'GD', 'LM', 'BFGS', 'RPROP'};
+otimizadores = {'BFGS', 'GD', 'LM', 'RPROP'};
 [idx_mod_ws, ~] = ismember(O, ws.o);
 otm_ws = otimizadores(idx_mod_ws);
 otm_ws = otm_ws{1};
 
 [idx_ini_ws, ~] = ismember(I, ws.i);
-ini_ws = bin2dec(num2str(idx_ini_ws));
+ini_ws = find(idx_ini_ws);
 
 [idx_mod_bs, ~] = ismember(O, bs.o);
 otm_bs = otimizadores(idx_mod_bs);
 otm_bs = otm_bs{1};
 
 [idx_ini_bs, ~] = ismember(I, bs.i);
-ini_bs = bin2dec(num2str(idx_ini_bs));
+ini_bs = find(idx_ini_bs);
 
 % Melhor modelo
 subplot(2,1,1)
-subtitle(compose('Melhor modelo: %s, H=%d, inic. tipo %d', otm_bs, bs.h, ini_bs)
+semilogy(tr_bs.perf, 'LineWidth', 1)
 hold on
-plot(tr_bs.perf, 'LineWidth', 1)
-plot(tr_bs.vperf, 'LineWidth', 1)
+semilogy(tr_bs.vperf, 'LineWidth', 1)
 [vperf_min, it_min] = min(tr_bs.vperf);
+subtitle(compose('Melhor modelo: H=%d, %s, inic. tipo %d', bs.h, otm_bs, ini_bs))
 xline(it_min,':')
 yline(vperf_min, ':')
 ylabel('mse')
@@ -233,11 +235,11 @@ legend({'Treinamento', 'Validação', 'Menor erro (valid.)'});
 
 % Pior modelo
 subplot(2,1,2)
-subtitle(compose('Melhor modelo: %s, H=%d, inic. tipo %d', otm_ws, ws.h, ini_ws))
+semilogy(tr_ws.perf, 'LineWidth', 1)
 hold on
-plot(tr_ws.perf, 'LineWidth', 1)
-plot(tr_ws.vperf, 'LineWidth', 1)
+semilogy(tr_ws.vperf, 'LineWidth', 1)
 [vperf_min, it_min] = min(tr_ws.vperf);
+subtitle(compose('Pior modelo: H=%d, %s, inic. tipo %d', ws.h, otm_ws, ini_ws))
 xline(it_min,':')
 yline(vperf_min, ':')
 xlabel('época')
@@ -248,19 +250,25 @@ ylabel('mse')
 % Avaliação final do melhor modelo no conjunto de teste
 net = bs.net;
 
-% Matriz de confusão e erro
+% Erro RMSE
 g = net(X_te); % predição
-[error, C, ~, ~] = confusion(heaviside(y_te),heaviside(g));
-acc = 1-error;
-fprintf('Acurácia final no conjunto de teste: %f\n',acc)
+errors = gsubtract(y_te, g);
+mse = sum(errors.^2)/numel(y_te);
+rmse = sqrt(mse);
+fprintf('Erro final no conjunto de teste (rmse): %f\n',rmse)
 
+% Histograma de erros
 figure()
-cm = confusionchart(C,1:5);
-cm.RowSummary = 'row-normalized';
-title(compose('Classif. binária - Acurácia final: %.1f%% (conjunto de teste)',acc*100));
-xlabel('Classe predita')
-ylabel('Classe verdadeira')
+histogram(errors)
+title('Hitograma de erros - Regressão (A)')
+xlabel('Erro absoluto')
+ylabel('Frequência')
 
+% Regressão
+figure()
+plotregression(y_te,g)
+xlabel('Target G3 (conj. teste)')
+ylabel('Predição G3')
 %%
 % Arquitetura da rede
 view(net)

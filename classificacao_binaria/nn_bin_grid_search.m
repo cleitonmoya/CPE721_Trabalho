@@ -203,13 +203,28 @@ tr_ws = ws.tr;
 figure()
 title('Performance - classif. binária')
 
+otimizadores = {'GD', 'LM', 'BFGS', 'RPROP'};
+[idx_mod_ws, ~] = ismember(O, ws.o);
+otm_ws = otimizadores(idx_mod_ws);
+otm_ws = otm_ws{1};
+
+[idx_ini_ws, ~] = ismember(I, ws.i);
+ini_ws = find(idx_ini_ws);
+
+[idx_mod_bs, ~] = ismember(O, bs.o);
+otm_bs = otimizadores(idx_mod_bs);
+otm_bs = otm_bs{1};
+
+[idx_ini_bs, ~] = ismember(I, bs.i);
+ini_bs = find(idx_ini_bs);
+
 % Melhor modelo
 subplot(2,1,1)
-subtitle('Melhor modelo: RPROP, H=6, inic. tipo 2')
+semilogy(tr_bs.perf, 'LineWidth', 1)
 hold on
-plot(tr_bs.perf, 'LineWidth', 1)
-plot(tr_bs.vperf, 'LineWidth', 1)
+semilogy(tr_bs.vperf, 'LineWidth', 1)
 [vperf_min, it_min] = min(tr_bs.vperf);
+subtitle(compose('Melhor modelo: H=%d, %s, inic. tipo %d', bs.h, otm_bs, ini_bs))
 xline(it_min,':')
 yline(vperf_min, ':')
 ylabel('mse')
@@ -217,16 +232,15 @@ legend({'Treinamento', 'Validação', 'Menor erro (valid.)'});
 
 % Pior modelo
 subplot(2,1,2)
-subtitle('Pior modelo: GD, H=3, inic. tipo 3')
+semilogy(tr_ws.perf, 'LineWidth', 1)
 hold on
-plot(tr_ws.perf, 'LineWidth', 1)
-plot(tr_ws.vperf, 'LineWidth', 1)
+semilogy(tr_ws.vperf, 'LineWidth', 1)
 [vperf_min, it_min] = min(tr_ws.vperf);
+subtitle(compose('Pior modelo: H=%d, %s, inic. tipo %d', ws.h, otm_ws, ini_ws))
 xline(it_min,':')
 yline(vperf_min, ':')
 xlabel('época')
 ylabel('mse')
-
 
 %%
 % Avaliação final do melhor modelo no conjunto de teste

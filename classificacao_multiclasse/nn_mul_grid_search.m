@@ -202,7 +202,7 @@ tr_bs = bs.tr;
 tr_ws = ws.tr;
 
 figure()
-title('Performance - classif. binária')
+title('Performance - classif. 5 classes')
 
 otimizadores = {'GD', 'LM', 'BFGS', 'RPROP'};
 [idx_mod_ws, ~] = ismember(O, ws.o);
@@ -221,11 +221,11 @@ ini_bs = find(idx_ini_bs);
 
 % Melhor modelo
 subplot(2,1,1)
-subtitle(compose('Melhor modelo: H=%d, %s, inic. tipo %d', bs.h, otm_bs, ini_bs))
+semilogy(tr_bs.perf, 'LineWidth', 1)
 hold on
-plot(tr_bs.perf, 'LineWidth', 1)
-plot(tr_bs.vperf, 'LineWidth', 1)
+semilogy(tr_bs.vperf, 'LineWidth', 1)
 [vperf_min, it_min] = min(tr_bs.vperf);
+subtitle(compose('Melhor modelo: H=%d, %s, inic. tipo %d', bs.h, otm_bs, ini_bs))
 xline(it_min,':')
 yline(vperf_min, ':')
 ylabel('mse')
@@ -233,11 +233,11 @@ legend({'Treinamento', 'Validação', 'Menor erro (valid.)'});
 
 % Pior modelo
 subplot(2,1,2)
-subtitle(compose('Pior modelo: H=%d, %s, inic. tipo %d', ws.h, otm_ws, ini_ws))
+semilogy(tr_ws.perf, 'LineWidth', 1)
 hold on
-plot(tr_ws.perf, 'LineWidth', 1)
-plot(tr_ws.vperf, 'LineWidth', 1)
+semilogy(tr_ws.vperf, 'LineWidth', 1)
 [vperf_min, it_min] = min(tr_ws.vperf);
+subtitle(compose('Pior modelo: H=%d, %s, inic. tipo %d', ws.h, otm_ws, ini_ws))
 xline(it_min,':')
 yline(vperf_min, ':')
 xlabel('época')
